@@ -25,6 +25,8 @@ void MessageQueue<T>::send(T &&msg)
 {
     std::lock_guard<std::mutex> lock(_mutex);
     
+    //Clear Queue before pushing the msg.
+    _queue.clear();
     _queue.push_back(std::move(msg));
     
     _condition.notify_one();
@@ -68,7 +70,7 @@ void TrafficLight::cycleThroughPhases()
 
     //Init first cycleDuration
     std::srand(std::time(0));
-    double cycleDuration = std::rand() % 2 + 4;
+    double cycleDuration = std::rand() % 2000 + 4000;
 
     // init stop watch
     lastUpdate = std::chrono::system_clock::now();
@@ -79,22 +81,22 @@ void TrafficLight::cycleThroughPhases()
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         
         // compute time difference to stop watch
-        long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - lastUpdate).count();
+        long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
         
         if (timeSinceLastUpdate >= cycleDuration) {
             std::lock_guard<std::mutex> lock(_mutex);
             if (_currentPhase == TrafficLightPhase::green) {
                 _currentPhase = TrafficLightPhase::red;
-                _msgqueue.send(std::move(TrafficLightPhase::red));
             }
             else
             {
                 _currentPhase = TrafficLightPhase::green;
-                _msgqueue.send(std::move(TrafficLightPhase::green));
             }
             
+            _msgqueue.send(std::move(TrafficLightPhase(_currentPhase)));
+            
             lastUpdate = std::chrono::system_clock::now();
-            cycleDuration = std::rand() % 2 + 4;
+            cycleDuration = std::rand() % 2000 + 4000;
         }
     }
 }
